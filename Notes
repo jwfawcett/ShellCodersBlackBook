@@ -1,0 +1,26 @@
+###Shell Coders Black Book###
+by John Fawcett
+
+Must Remove all Null Bytes in Shell Code x90
+
+Try to XOR Null Bytes 
+
+0x68732f2f6e69622f = /bin//sh #In Little Endian Order the double slash used to remove null byte
+
+64 Bit  32 Bit  Role
+RAX|    EAX|    Accumulator/ Arithmetic
+RBX|    EBX|    Base Pointer
+RDX|    EDX|    Data I/O
+RSI|    ESI|    Source Index (String Memory Copy)
+RDI|    EDI|    Destination Index
+RIP|    EIP|    Instruction Pointer
+RSP|    ESP|    Stack Pointer
+
+#Evading Detection#
+
+unlink (argv[0]);        // Deletes
+if (fork()!=0) return 0; //Go To Background
+
+
+
+
